@@ -33,6 +33,13 @@
         .hidden { display: none !important; }
         input { width: 80%; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; text-align: center; font-size: 1.1rem; }
 
+        /* تنسيق ملخص الإجابات البسيط */
+        .summary-box { text-align: right; margin-top: 25px; max-height: 350px; overflow-y: auto; border: 1px solid #eee; border-radius: 10px; padding: 15px; background: #fafafa; }
+        .summary-item { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.95rem; line-height: 1.6; }
+        .summary-item:last-child { border-bottom: none; }
+        .summary-ans-correct { color: var(--correct); font-weight: bold; }
+        .summary-ans-wrong { color: var(--wrong); font-weight: bold; }
+
         @media (max-width: 600px) {
             body { padding: 10px; }
             .quiz-card { padding: 20px 15px; border-top-width: 8px; }
@@ -83,8 +90,15 @@
 
     <div id="result-page" class="hidden" style="text-align: center;">
         <h2 id="final-greeting"></h2>
-        <div style="font-size: 5rem; font-weight: bold; margin: 25px 0; color: var(--main-color);" id="score-text"></div>
-        <button class="btn" onclick="location.reload()">خروج</button>
+        <div style="font-size: 4rem; font-weight: bold; margin: 15px 0; color: var(--main-color);" id="score-text"></div>
+        
+        <!-- ملخص الإجابات البسيط -->
+        <div style="text-align: right; font-weight: bold; color: var(--main-color); margin-top: 15px;">ملخص إجاباتك:</div>
+        <div id="answers-summary" class="summary-box"></div>
+
+        <div style="margin-top: 25px;">
+            <button class="btn" onclick="location.reload()">خروج</button>
+        </div>
     </div>
 </div>
 
@@ -286,6 +300,22 @@
 
         document.getElementById('score-text').innerText = `${userScore} / ${finalQuestions.length}`;
         
+        // عرض ملخص الإجابات البسيط للطالب
+        const summaryBox = document.getElementById('answers-summary');
+        summaryBox.innerHTML = '';
+        studentAnswersLog.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'summary-item';
+            const statusClass = item.isCorrect ? 'summary-ans-correct' : 'summary-ans-wrong';
+            const statusIcon = item.isCorrect ? '✔️' : '❌';
+            div.innerHTML = `
+                <div><strong>س${index+1}:</strong> ${item.qText}</div>
+                <div>إجابتك: <span class="${statusClass}">${item.studentAns} ${statusIcon}</span></div>
+                ${!item.isCorrect ? `<div>الإجابة الصحيحة: <span class="summary-ans-correct">${item.correctAns}</span></div>` : ''}
+            `;
+            summaryBox.appendChild(div);
+        });
+
         // حفظ النتيجة في قاعدة بيانات مساعد (musaedDb)
         await musaedDb.collection("alkfaeat_results").add({ 
             name: sName, 
