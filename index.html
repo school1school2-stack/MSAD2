@@ -152,8 +152,18 @@ const rawQuizData = [
     let sName, sEmail, currentIdx = 0, userScore = 0, timer, finalQuestions;
     let studentAnswersLog = [];
 
-    // إعدادات Firebase الخاصة بمشروع الأستاذ مساعد
-    const firebaseConfig = { 
+    // إعدادات مشروعك أنت (لقراءة بيانات الطلاب المسموح لهم من قاعدة بياناتك)
+    const myFirebaseConfig = { 
+        apiKey: "AIzaSyBkCO7FDQXd89YDf843J4_AtvEFvzzt-R0", 
+        authDomain: "aztlg-494c3.firebaseapp.com", 
+        projectId: "aztlg-494c3", 
+        storageBucket: "aztlg-494c3.firebasestorage.app", 
+        messagingSenderId: "597051893949", ,
+        appId: "1:597051893949:web:de5554ac900317a92b2fd4" 
+    };
+
+    // إعدادات مشروع مساعد (لحفظ النتائج والتحقق من التكرار لديه)
+    const musaedFirebaseConfig = { 
         apiKey: "AIzaSyDGftCpTmowkhQlNAgH_o7dIMtD-RKSNaM", 
         authDomain: "msad-e258c.firebaseapp.com", 
         projectId: "msad-e258c", 
@@ -161,26 +171,34 @@ const rawQuizData = [
         messagingSenderId: "680278639571", 
         appId: "1:680278639571:web:4e337e1751ebe9d9e92526" 
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+
+    // تهيئة التطبيق الأساسي (مشروعك للتحقق من الطلاب)
+    const myApp = firebase.initializeApp(myFirebaseConfig, 'myApp');
+    const myDb = myApp.firestore();
+
+    // تهيئة تطبيق ثانٍ (مشروع مساعد لتسجيل النتائج)
+    const musaedApp = firebase.initializeApp(musaedFirebaseConfig, 'musaedApp');
+    const musaedDb = musaedApp.firestore();
 
     async function verifyAndStart() {
         const emailInput = document.getElementById('studentEmail').value.trim().toLowerCase();
         if(!emailInput.includes('@')) return alert("يرجى إدخال إيميل منصة مدرستي");
         
-        document.getElementById('status-msg').innerText = "جاري التحقق... ⏳";
+        document.getElementById('status-msg').innerText = "جاري التحقق من بياناتك... ⏳";
 
         try {
-            const allowedDoc = await db.collection("allowed_students").doc(emailInput).get();
+            // سحب البيانات من قاعدتك أنت (myDb)
+            const allowedDoc = await myDb.collection("allowed_students").doc(emailInput).get();
             if (!allowedDoc.exists) {
-                showLock("هذا الإيميل غير مسجل. يرجى مراجعة المعلم.");
+                showLock("هذا الإيميل غير مسجل في قاعدة البيانات الخاصة بك. يرجى مراجعة المعلم.");
                 return;
             }
 
             sName = allowedDoc.data().name;
             sEmail = emailInput;
 
-            const resultCheck = await db.collection("alkfaeat_results")
+            // التحقق من قاعدة مساعد (musaedDb) هل اختبر مسبقاً؟
+            const resultCheck = await musaedDb.collection("alkfaeat_results")
                 .where("email", "==", sEmail)
                 .where("model_id", "==", currentModelId).get();
 
@@ -195,7 +213,10 @@ const rawQuizData = [
             document.getElementById('start-page').classList.add('hidden');
             document.getElementById('quiz-page').classList.remove('hidden');
             loadQuestion();
-        } catch (e) { alert("خطأ في الاتصال بالسيرفر."); }
+        } catch (e) { 
+            console.error(e);
+            alert("خطأ في الاتصال بقاعدة البيانات. تأكد من إعدادات الاتصال وقواعد الأمان."); 
+        }
     }
 
     function showLock(msg) {
@@ -267,7 +288,8 @@ const rawQuizData = [
 
         document.getElementById('score-text').innerText = `${userScore} / ${finalQuestions.length}`;
         
-        await db.collection("alkfaeat_results").add({ 
+        // حفظ النتيجة في قاعدة بيانات مساعد (musaedDb)
+        await musaedDb.collection("alkfaeat_results").add({ 
             name: sName, 
             email: sEmail, 
             score: userScore, 
